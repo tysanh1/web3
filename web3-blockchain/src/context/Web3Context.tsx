@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ethers } from 'ethers';
-import { NFT_CONTRACT_ADDRESS } from '@/contracts/NFTContract';
+import { NFT_CONTRACT_ADDRESS } from '@/smartcontracts/NFTContract';
 import { NetworkConfig } from '@/types/nft';
 
 // Supported networks configuration

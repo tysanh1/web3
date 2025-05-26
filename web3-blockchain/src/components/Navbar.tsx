@@ -40,11 +40,11 @@ const Navbar = () => {
             <Link to="/create" className="text-gray-300 hover:text-white transition-colors">
               Create
             </Link>
-            <Link to="/analytics" className="text-gray-300 hover:text-white transition-colors">
-              Analytics
-            </Link>
             <Link to="/myassets" className="text-gray-300 hover:text-white transition-colors">
               My Assets
+            </Link>
+            <Link to="/analytics" className="text-gray-300 hover:text-white transition-colors">
+              Analytics
             </Link>
 
           </div>
