@@ -1,7 +1,11 @@
-// web.js - Ethereum Sepolia interaction API using Express + Ethers
+// web.js - API Express dùng ether.js + mint NFT + IPFS
 const express = require("express");
 const cors = require("cors");
 const { ethers } = require("ethers");
+const { provider, wallet, loadNFTContract } = require("./ether");
+const { create } = require("ipfs-http-client");
+const multer = require("multer");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -9,20 +13,14 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// ====================== CONFIG ============================
-const INFURA_KEY = "YOUR_INFURA_KEY_HERE"; // 🔑 Thay bằng Infura key thật
-const PRIVATE_KEY = "YOUR_PRIVATE_KEY_HERE"; // 🔐 Không có "0x" phía trước
+// IPFS cấu hình
+const ipfs = create({ url: "https://ipfs.infura.io:5001/api/v0" });
+const upload = multer({ dest: "uploads/" });
 
-const provider = new ethers.JsonRpcProvider(`https://sepolia.infura.io/v3/${INFURA_KEY}`);
-const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-// ===========================================================
-
-// GET / - Health check
 app.get("/", (req, res) => {
-  res.send("🚀 Ethereum Sepolia Web3 API is running!");
+  res.send("🚀 Sepolia Ethereum NFT API is running!");
 });
 
-// GET /balance/:address - Kiểm tra số dư ETH
 app.get("/balance/:address", async (req, res) => {
   try {
     const balance = await provider.getBalance(req.params.address);
@@ -35,7 +33,6 @@ app.get("/balance/:address", async (req, res) => {
   }
 });
 
-// GET /network - Lấy thông tin mạng
 app.get("/network", async (req, res) => {
   const network = await provider.getNetwork();
   res.json({
@@ -44,7 +41,6 @@ app.get("/network", async (req, res) => {
   });
 });
 
-// POST /transfer - Gửi ETH từ ví server đến ví người dùng
 app.post("/transfer", async (req, res) => {
   const { to, amount } = req.body;
   try {
@@ -53,16 +49,30 @@ app.post("/transfer", async (req, res) => {
       value: ethers.parseEther(amount)
     });
     await tx.wait();
-    res.json({
-      status: "success",
-      hash: tx.hash
-    });
+    res.json({ status: "success", hash: tx.hash });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
-// Start server
+// Upload ảnh lên IPFS và mint NFT
+app.post("/mint", upload.single("file"), async (req, res) => {
+  try {
+    const fileData = fs.readFileSync(req.file.path);
+    const uploaded = await ipfs.add(fileData);
+    const tokenURI = `https://ipfs.io/ipfs/${uploaded.path}`;
+
+    const contract = loadNFTContract();
+    const tx = await contract.mint(tokenURI);
+    await tx.wait();
+
+    fs.unlinkSync(req.file.path); // xóa file tạm
+    res.json({ status: "minted", tokenURI, txHash: tx.hash });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Sepolia API listening at http://localhost:${PORT}`);
+  console.log(`🚀 NFT Web3 API listening at http://localhost:${PORT}`);
 });
