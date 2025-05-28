@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,11 +11,16 @@ import CreateNFT from "./pages/CreateNFT";
 import NFTDetail from "./pages/NFTDetail";
 import NotFound from "./pages/NotFound";
 import MyAssets from "./pages/MyAssets";
+import { Web3Provider } from "./context/Web3Context";
+import { AuthProvider } from "./context/AuthContext";
+
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <Web3Provider>
+    <AuthProvider> 
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -33,6 +37,8 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
+    </AuthProvider>
+    </Web3Provider>
   </QueryClientProvider>
 );
 

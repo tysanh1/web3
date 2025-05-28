@@ -2,28 +2,35 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useWeb3 } from '@/context/Web3Context';
 
 interface MetaMaskConnectProps {
-  onConnect: (address: string) => void;
+  onConnect: (account: string) => void;
+
 }
+
 
 const MetaMaskConnect: React.FC<MetaMaskConnectProps> = ({ onConnect }) => {
   const { toast } = useToast();
+
+  const {connectWallet,account} = useWeb3();
 
   const connectToMetaMask = async () => {
     try {
       // Check if MetaMask is installed
       if (typeof window.ethereum !== 'undefined') {
         // Request account access
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        // const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         
         // Get the first account
-        const address = accounts[0];
-        onConnect(address);
+        // const account = accounts[0];
+        onConnect(account);
+
+        connectWallet()
         
         toast({
           title: "Wallet Connected",
-          description: `Connected to ${address.substring(0, 6)}...${address.substring(address.length - 4)}`,
+          description: `Connected to ${account.substring(0, 6)}...${account.substring(account.length - 4)}`,
         });
       } else {
         toast({

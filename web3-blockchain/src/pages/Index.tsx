@@ -45,7 +45,7 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="md:w-1/2 flex justify-center">
+            {/* <div className="md:w-1/2 flex justify-center">
               {!isWalletConnected ? (
                 <MetaMaskConnect onConnect={handleConnect} />
               ) : (
@@ -61,7 +61,7 @@ const Index = () => {
                   </Link>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         </section>
         
