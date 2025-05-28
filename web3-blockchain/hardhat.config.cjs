@@ -1,12 +1,21 @@
-require("@nomicfoundation/hardhat-toolbox");
+// hardhat.config.js
 require("dotenv").config();
+require("@nomicfoundation/hardhat-toolbox");
 
 module.exports = {
   solidity: "0.8.20",
   networks: {
     sepolia: {
       url: `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: [`1b9fee13b61c76d6bcbab03808740a4351dad720777b8e4d06c5d3438e91e8c4`]
-    }
+      accounts: [process.env.PRIVATE_KEY],
+    },
+    polygonMumbai: {
+      url: `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_KEY}`,
+      accounts: [process.env.PRIVATE_KEY],
+    },
+    // Thêm các mạng khác nếu cần
   },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY
+  }
 };

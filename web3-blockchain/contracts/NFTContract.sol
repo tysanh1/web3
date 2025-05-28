@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol"; 
 
 /**
  * @title MyNFT
@@ -18,6 +17,7 @@ contract MyNFT is ERC721URIStorage, Ownable {
 
     // Ánh xạ từ tokenId đến địa chỉ của marketplace đã tạo NFT này
     mapping(uint256 => address) public marketplaceCreator;
+    mapping(uint256 => address) public originalCreator;
 
     /**
      * @dev Khởi tạo hợp đồng NFT.
@@ -35,7 +35,7 @@ contract MyNFT is ERC721URIStorage, Ownable {
      * @param marketplace Địa chỉ của hợp đồng marketplace đã tạo NFT này.
      * @return tokenId ID của NFT vừa được tạo.
      */
-    function mintNFT(address to, string memory tokenURI, address marketplace) public onlyOwner returns (uint256) {
+    function mintNFT(address to, string memory tokenURI, address marketplace) public onlycreator returns (uint256) {
         // Tăng ID token cho NFT mới
         uint256 newItemId = _tokenIdCounter;
         _tokenIdCounter++; 
@@ -43,6 +43,7 @@ contract MyNFT is ERC721URIStorage, Ownable {
         _mint(to, newItemId);
         _setTokenURI(newItemId, tokenURI);
         marketplaceCreator[newItemId] = marketplace; // Lưu địa chỉ marketplace đã tạo
+        originalCreator[newItemId] = to;
         return newItemId;
     }
 
@@ -59,8 +60,8 @@ contract MyNFT is ERC721URIStorage, Ownable {
      * Lưu ý: Modifier này được sử dụng trong MyNFT.sol như một ví dụ về kiểm soát quyền truy cập.
      * Trong Marketplace.sol, các hàm tương tác với NFT sẽ gọi các hàm public của MyNFT.
      */
-    modifier onlyMarketplaceCreatorOrOwner(uint256 _tokenId) {
-        require(msg.sender == marketplaceCreator[_tokenId] || msg.sender == owner(), "Not authorized to modify this NFT via marketplace.");
+    modifier onlyMarketplaceCreatorOrcreator(uint256 _tokenId) {
+        require(msg.sender == marketplaceCreator[_tokenId] || msg.sender == creator(), "Not authorized to modify this NFT via marketplace.");
         _;
     }
 }
@@ -294,7 +295,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      * @dev Cập nhật phí niêm yết. Chỉ chủ sở hữu hợp đồng marketplace mới có thể gọi.
      * @param _newListingPrice Phí niêm yết mới.
      */
-    function updateListingPrice(uint256 _newListingPrice) public onlyOwner {
+    function updateListingPrice(uint256 _newListingPrice) public onlycreator {
         listingPrice = _newListingPrice;
         emit ListingPriceUpdated(_newListingPrice);
     }
@@ -302,10 +303,10 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
     /**
      * @dev Rút phí niêm yết đã thu được. Chỉ chủ sở hữu hợp đồng marketplace mới có thể gọi.
      */
-    function withdrawListingPrice() public onlyOwner nonReentrant {
+    function withdrawListingPrice() public onlycreator nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "No balance to withdraw");
-        (bool success, ) = payable(owner()).call{value: balance}("");
+        (bool success, ) = payable(creator()).call{value: balance}("");
         require(success, "Withdrawal failed");
     }
 
@@ -359,7 +360,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      */
     function listNFTForSale(uint256 _tokenId, uint256 _price) public nonReentrant {
         require(_price > 0, "Price must be greater than 0");
-        require(nftContract.ownerOf(_tokenId) == msg.sender, "You are not the owner of this NFT");
+        require(nftContract.creatorOf(_tokenId) == msg.sender, "You are not the creator of this NFT");
         require(nftContract.getApproved(_tokenId) == address(this), "Marketplace not approved to transfer NFT");
         require(idToAuction[_tokenId].ended || !idToAuction[_tokenId].started, "NFT is currently in an active auction");
         
@@ -388,7 +389,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
         require(!sale.isSold, "NFT has already been sold");
         require(msg.value == sale.price, "Please submit the asking price");
         require(sale.seller != msg.sender, "Cannot buy your own NFT");
-
+ 
         // Chuyển NFT cho người mua
         nftContract.transferFrom(sale.seller, msg.sender, _tokenId);
 
@@ -398,15 +399,15 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
         uint256 sellerProceeds = msg.value - royaltyAmount;
 
         // Gửi tiền bản quyền cho người tạo ban đầu của NFT (nếu có)
-        // Lưu ý: MyNFT.ownerOf(_tokenId) sẽ trả về chủ sở hữu hiện tại của NFT,
+        // Lưu ý: MyNFT.creatorOf(_tokenId) sẽ trả về chủ sở hữu hiện tại của NFT,
         // không phải người tạo ban đầu. Để tính đúng royalty cho người tạo ban đầu,
         // bạn cần lưu trữ địa chỉ người tạo ban đầu trong TokenDetails hoặc một mapping khác.
         // Hiện tại, nó sẽ gửi royalty cho chủ sở hữu hiện tại của NFT.
         // Nếu bạn muốn gửi cho người tạo ban đầu, bạn cần thêm một trường `originalCreator`
         // vào `TokenDetails` khi NFT được tạo.
-        address currentNFTOwner = nftContract.ownerOf(_tokenId); // Lấy chủ sở hữu hiện tại của NFT
+        address currentNFTcreator = nftContract.creatorOf(_tokenId); // Lấy chủ sở hữu hiện tại của NFT
         if (royaltyAmount > 0) {
-            (bool royaltySent, ) = payable(currentNFTOwner).call{value: royaltyAmount}("");
+            (bool royaltySent, ) = payable(currentNFTcreator).call{value: royaltyAmount}("");
             require(royaltySent, "Failed to send royalty");
         }
 
@@ -428,7 +429,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      */
     function resellNFT(uint256 _tokenId, uint256 _newPrice) public {
         require(_newPrice > 0, "New price must be greater than 0");
-        require(nftContract.ownerOf(_tokenId) == msg.sender, "You are not the owner of this NFT");
+        require(nftContract.creatorOf(_tokenId) == msg.sender, "You are not the creator of this NFT");
         require(nftContract.getApproved(_tokenId) == address(this), "Marketplace not approved to transfer NFT");
         require(idToAuction[_tokenId].ended || !idToAuction[_tokenId].started, "NFT is currently in an active auction");
 
@@ -455,7 +456,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      * @param _duration Thời gian đấu giá tính bằng giây.
      */
     function startAuction(uint256 _tokenId, uint256 _minBid, uint256 _duration) public nonReentrant {
-        require(nftContract.ownerOf(_tokenId) == msg.sender, "You are not the owner of this NFT");
+        require(nftContract.creatorOf(_tokenId) == msg.sender, "You are not the creator of this NFT");
         require(nftContract.getApproved(_tokenId) == address(this), "Marketplace not approved to transfer NFT");
         require(_minBid > 0, "Minimum bid must be greater than 0");
         require(_duration > 0, "Auction duration must be greater than 0");
@@ -533,9 +534,9 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
             uint256 sellerProceeds = auction.currentBid - royaltyAmount;
 
             // Gửi tiền bản quyền cho người tạo ban đầu của NFT (hoặc chủ sở hữu hiện tại nếu không có trường originalCreator)
-            address currentNFTOwner = nftContract.ownerOf(_tokenId); // Lấy chủ sở hữu hiện tại của NFT
+            address currentNFTcreator = nftContract.creatorOf(_tokenId); // Lấy chủ sở hữu hiện tại của NFT
             if (royaltyAmount > 0) {
-                (bool royaltySent, ) = payable(currentNFTOwner).call{value: royaltyAmount}("");
+                (bool royaltySent, ) = payable(currentNFTcreator).call{value: royaltyAmount}("");
                 require(royaltySent, "Failed to send royalty");
             }
 
@@ -560,7 +561,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      */
     function updateRoyalty(uint256 _tokenId, uint256 _newRoyaltyBasisPoints) public {
         // Chỉ cho phép người tạo ban đầu của NFT hoặc chủ hợp đồng marketplace cập nhật bản quyền
-        require(nftContract.ownerOf(_tokenId) == msg.sender || owner() == msg.sender, "Only original creator or marketplace owner can update royalty");
+        require(nftContract.creatorOf(_tokenId) == msg.sender || creator() == msg.sender, "Only original creator or marketplace creator can update royalty");
         require(_newRoyaltyBasisPoints <= 10000, "Royalty cannot exceed 100%"); // 10000 basis points = 100%
 
         tokenExtendedDetails[_tokenId].royaltyBasisPoints = _newRoyaltyBasisPoints;
