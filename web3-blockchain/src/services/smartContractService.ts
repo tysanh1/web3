@@ -1,6 +1,6 @@
-
 import { ethers } from 'ethers';
-import { NFT_CONTRACT_ABI, NFT_CONTRACT_ADDRESS } from '
+import { NFT_CONTRACT_ABI, NFT_CONTRACT_ADDRESS } from '../contracts/NFTcontract'
+import addresses from '../contracts/contract-addresses.json';
 import { NFT, Transaction } from '@/types/nft';
 import { v4 as uuidv4 } from 'uuid';
 import { localNFTService } from './localNFTService';

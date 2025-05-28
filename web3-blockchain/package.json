@@ -46,7 +46,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
-    "ethers": "^6.14.1",
+    "ethers": "^6.14.3",
     "input-otp": "^1.2.4",
     "ipfs-http-client": "^60.0.1",
     "lucide-react": "^0.462.0",
@@ -87,5 +87,10 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"
-  }
+  },
+  "main": "eslint.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }
