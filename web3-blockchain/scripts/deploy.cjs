@@ -1,3 +1,4 @@
+console.log("INFURA_ID:", process.env.INFURA_KEY);
 const hre = require("hardhat");
 
 async function main() {
