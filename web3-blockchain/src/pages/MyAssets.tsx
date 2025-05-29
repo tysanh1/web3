@@ -66,13 +66,20 @@ const MyAssets = () => {
               title: "New NFT Found",
               description: `Successfully loaded "${newNFT.name}"`,
             });
+          } else {
+            console.warn('New NFT not found or not owned by current account');
           }
         } catch (error) {
           console.error('Error fetching new NFT:', error);
+          toast({
+            title: "Warning",
+            description: "Could not load the newly created NFT. Please refresh the page.",
+            variant: "destructive",
+          });
         }
       }
 
-      // Fetch all user's NFTs from local storage
+      // Fetch all user's NFTs
       const userNFTs = await nftService.getNFTsByOwner(account);
       console.log('User NFTs:', userNFTs);
 
@@ -87,8 +94,17 @@ const MyAssets = () => {
       if (combinedNFTs.length === 0) {
         toast({
           title: "No NFTs Found",
-          description: "You don't own any NFTs yet.",
+          description: "You don't own any NFTs yet. Create your first NFT!",
         });
+      } else if (newNftId && newNFT) {
+        // Scroll to the new NFT
+        setTimeout(() => {
+          const newNftElement = document.getElementById(`nft-${newNftId}`);
+          if (newNftElement) {
+            newNftElement.scrollIntoView({ behavior: 'smooth' });
+            newNftElement.classList.add('highlight-new-nft');
+          }
+        }, 500);
       }
     } catch (error) {
       console.error('Error fetching NFTs:', error);

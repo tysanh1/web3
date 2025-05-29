@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Eye, Heart, Share2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface NFTCardProps {
   id: string;
@@ -30,7 +30,14 @@ const NFTCard: React.FC<NFTCardProps> = ({
   views = 0
 }) => {
   return (
-    <Card className="nft-card group overflow-hidden bg-gray-900 border-gray-800">
+    <div
+      id={`nft-${id}`}
+      className={cn(
+        "bg-gray-900 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg",
+        "hover:transform hover:-translate-y-1",
+        "highlight-new-nft:ring-2 highlight-new-nft:ring-green-500"
+      )}
+    >
       <Link to={`/nft/${id}`}>
         <div className="relative overflow-hidden">
           <img 
@@ -69,7 +76,7 @@ const NFTCard: React.FC<NFTCardProps> = ({
           </button>
         </Link>
       </CardFooter>
-    </Card>
+    </div>
   );
 };
 

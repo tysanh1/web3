@@ -71,6 +71,15 @@ const CreateNFT = () => {
       return;
     }
 
+    if (!formData.name || !formData.price) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields (name and price)",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
 
@@ -83,14 +92,14 @@ const CreateNFT = () => {
         image: imageFile,
       };
 
+      console.log("Creating NFT with data:", nftData);
       const newNFT = await nftService.createNFT(nftData, account);
+      console.log("NFT created:", newNFT);
 
       toast({
         title: "NFT Created Successfully!",
         description: `${newNFT.name} has been minted and listed for ${newNFT.price} ${newNFT.currency}`,
       });
-
-      navigate(`/my-assets?new=${newNFT.id}`);
 
       // Reset form
       setFormData({
@@ -103,11 +112,16 @@ const CreateNFT = () => {
       });
       setImageFile(null);
       setImagePreview("");
-    } catch (error) {
+
+      // Navigate to MyAssets page with the new NFT ID
+      console.log("Navigating to MyAssets with new NFT ID:", newNFT.id);
+      navigate(`/my-assets?new=${newNFT.id}`, { replace: true });
+      
+    } catch (error: any) {
       console.error("Error creating NFT:", error);
       toast({
         title: "Error",
-        description: "Failed to create NFT. Please try again.",
+        description: error.message || "Failed to create NFT. Please try again.",
         variant: "destructive",
       });
     } finally {

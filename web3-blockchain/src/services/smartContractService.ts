@@ -10,7 +10,7 @@ const isEthereumAvailable = () => {
   return typeof window !== "undefined" && window.ethereum !== undefined;
 };
 
-// Get ethers provider
+// Get ethers provider to interact with the blockchain
 const getProvider = async () => {
   if (!isEthereumAvailable()) {
     throw new Error("Ethereum provider not found. Please install MetaMask.");
@@ -207,10 +207,16 @@ export const smartContractService = {
         throw new Error("Ethereum wallet not found. Please install MetaMask.");
       }
 
+      // Get contract with signer
+      const contract = await smartContractService.getContract(true);
+      if (!contract) {
+        throw new Error("Failed to get contract instance");
+      }
+
       // Get current network information
       const { chainId, networkInfo } = await getNetworkInfo();
 
-      // Create image URL
+      // Upload image to IPFS (simulated)
       let imageUrl: string;
       const imageData = data.image;
       
@@ -234,9 +240,32 @@ export const smartContractService = {
         throw new Error('Invalid image data provided');
       }
 
-      // Generate unique token ID
-      const tokenId = Date.now().toString();
-      const timestamp = new Date().toISOString();
+      // Create metadata
+      const metadata = {
+        name: data.name,
+        description: data.description || "",
+        image: imageUrl,
+        attributes: {
+          category: data.category || "art",
+          collection: data.collection || "My Collection",
+          price: data.price || "0",
+          royalty: data.royalty || "2.5"
+        }
+      };
+
+      // In production, upload metadata to IPFS
+      const tokenURI = `ipfs://mock/${Date.now()}`;
+
+      // Mint NFT
+      console.log("Minting NFT...");
+      const tx = await contract.mint(ownerAddress, tokenURI);
+      const receipt = await tx.wait();
+
+      // Get token ID from event
+      const event = receipt.logs[0];
+      const tokenId = event.args[2].toString();
+
+      console.log(`NFT minted with token ID: ${tokenId}`);
 
       // Create NFT object
       const nft: NFT = {
@@ -246,39 +275,35 @@ export const smartContractService = {
         image: imageUrl,
         owner: ownerAddress,
         creator: ownerAddress,
-        tokenURI: `ipfs://QmFake/${tokenId}`,
-        createdAt: timestamp,
+        tokenURI: tokenURI,
+        createdAt: new Date().toISOString(),
         price: data.price || "0",
         currency: "ETH",
         category: data.category || "art",
-        collection: data.collection || "Unknown",
+        collection: data.collection || "My Collection",
         views: 0,
         likes: 0,
         chainId: chainId,
       };
 
-      // Create mint transaction
-      const txHash = `0x${Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+      // Store in local storage for immediate access
+      const existingNFTs = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([...existingNFTs, nft]));
+
+      // Create transaction record
       const transaction: Transaction = {
-        hash: txHash,
+        hash: receipt.hash,
         from: ethers.ZeroAddress,
         to: ownerAddress,
         tokenId,
-        timestamp,
+        timestamp: new Date().toISOString(),
         type: "mint",
         chainId: chainId,
       };
 
-      // Get existing data
-      const existingNFTs = getStoredNFTs();
+      // Store transaction
       const existingTxs = JSON.parse(localStorage.getItem(TRANSACTIONS_KEY) || "[]");
-
-      // Store updated data
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([...existingNFTs, nft]));
       localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify([...existingTxs, transaction]));
-
-      // Log the operation
-      console.log(`Minted NFT ${tokenId} to ${ownerAddress} on network ${networkInfo.name} (${chainId})`);
 
       return nft;
     } catch (error: any) {

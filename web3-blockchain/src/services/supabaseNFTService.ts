@@ -23,7 +23,6 @@ export const supabaseNFTService = {
       description: item.description || '',
       image: item.image_url,
       owner: item.owner_id,
-      creator: item.creator_id,
       tokenURI: item.metadata_url,
       createdAt: item.created_at,
     }));
@@ -47,7 +46,6 @@ export const supabaseNFTService = {
       description: item.description || '',
       image: item.image_url,
       owner: item.owner_id,
-      creator: item.creator_id,
       tokenURI: item.metadata_url,
       createdAt: item.created_at,
     }));
@@ -76,13 +74,12 @@ export const supabaseNFTService = {
       description: data.description || '',
       image: data.image_url,
       owner: data.owner_id,
-      creator: data.creator_id,
       tokenURI: data.metadata_url,
       createdAt: data.created_at,
     };
   },
 
-  createNFT: async (data: NFTFormData, creator: string): Promise<NFT> => {
+  createNFT: async (data: NFTFormData, owner: string): Promise<NFT> => {
     // In a real app, upload the image to IPFS/Supabase Storage
     let imageUrl = 'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGFic3RyYWN0fGVufDB8fDB8fHww';
     
@@ -126,8 +123,7 @@ export const supabaseNFTService = {
         name: data.name,
         description: data.description || '',
         image_url: imageUrl,
-        owner_id: creator,
-        creator_id: creator,
+        owner_id: owner,
         metadata_url: metadataUrl,
         price: 0, // Default price
         royalty_percentage: 0, // Default royalty
@@ -152,7 +148,7 @@ export const supabaseNFTService = {
         transaction_hash: `0x${Math.random().toString(16).substring(2, 10)}`,
         transaction_type: 'mint',
         seller_id: '0x0000000000000000000000000000000000000000', // For minting
-        buyer_id: creator,
+        buyer_id: owner,
         price: 0, // Mint price is 0
       });
       
@@ -168,7 +164,6 @@ export const supabaseNFTService = {
       description: nftData.description || '',
       image: nftData.image_url,
       owner: nftData.owner_id,
-      creator: nftData.creator_id,
       tokenURI: nftData.metadata_url,
       createdAt: nftData.created_at,
     };

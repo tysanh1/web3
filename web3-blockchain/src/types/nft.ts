@@ -22,11 +22,12 @@ export interface NFT {
 
 export interface NFTFormData {
   name: string;
-  description: string;
-  image: string | File;
-  price?: string;
+  description?: string;
   category?: string;
   collection?: string;
+  price?: string;
+  image: File | string;
+  royalty?: string;
 }
 
 

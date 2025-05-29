@@ -19,6 +19,9 @@ contract MyNFT is ERC721URIStorage, Ownable {
     mapping(uint256 => address) public marketplaceCreator;
     mapping(uint256 => address) public originalCreator;
 
+    // Events
+    event NFTMinted(uint256 indexed tokenId, address indexed to, string tokenURI);
+
     /**
      * @dev Khởi tạo hợp đồng NFT.
      * @param name Tên của bộ sưu tập NFT (ví dụ: "Digital Dreams").
@@ -29,22 +32,49 @@ contract MyNFT is ERC721URIStorage, Ownable {
     }
 
     /**
-     * @dev Tạo một NFT mới và gán nó cho người gọi.
+     * @dev Tạo một NFT mới.
      * @param to Địa chỉ sẽ nhận NFT.
-     * @param uri URI metadata của NFT (hash IPFS).
-     * @param marketplace Địa chỉ của hợp đồng marketplace đã tạo NFT này.
+     * @param uri URI metadata của NFT (IPFS hash).
      * @return tokenId ID của NFT vừa được tạo.
      */
-    function mintNFT(address to, string memory uri, address marketplace) public onlycreator returns (uint256) {
-        // Tăng ID token cho NFT mới
-        uint256 newItemId = _tokenIdCounter;
-        _tokenIdCounter++; 
+    function mint(address to, string memory uri) public returns (uint256) {
+        require(to != address(0), "Invalid recipient address");
         
-        _mint(to, newItemId);
-        _seturi(newItemId, uri);
-        marketplaceCreator[newItemId] = marketplace; // Lưu địa chỉ marketplace đã tạo
-        originalCreator[newItemId] = to;
-        return newItemId;
+        uint256 tokenId = _tokenIdCounter;
+        _tokenIdCounter++;
+
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
+
+        emit NFTMinted(tokenId, to, uri);
+        
+        return tokenId;
+    }
+
+    /**
+     * @dev Lấy tổng số NFT đã được mint.
+     */
+    function totalSupply() public view returns (uint256) {
+        return _tokenIdCounter;
+    }
+
+    /**
+     * @dev Override function to prevent token transfers if necessary
+     */
+    function _update(
+        address to,
+        uint256 tokenId,
+        address auth
+    ) internal virtual override returns (address) {
+        return super._update(to, tokenId, auth);
+    }
+
+    /**
+     * @dev Hủy một NFT. Chỉ owner của contract mới có thể gọi function này.
+     * @param tokenId ID của NFT cần hủy.
+     */
+    function burn(uint256 tokenId) public onlyOwner {
+        _burn(tokenId);
     }
 
     /**
@@ -61,7 +91,7 @@ contract MyNFT is ERC721URIStorage, Ownable {
      * Trong Marketplace.sol, các hàm tương tác với NFT sẽ gọi các hàm public của MyNFT.
      */
     modifier onlyMarketplaceCreatorOrcreator(uint256 _tokenId) {
-        require(msg.sender == marketplaceCreator[_tokenId] || msg.sender == creator(), "Not authorized to modify this NFT via marketplace.");
+        require(msg.sender == marketplaceCreator[_tokenId] || msg.sender == owner(), "Not authorized to modify this NFT via marketplace.");
         _;
     }
 }
@@ -295,7 +325,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      * @dev Cập nhật phí niêm yết. Chỉ chủ sở hữu hợp đồng marketplace mới có thể gọi.
      * @param _newListingPrice Phí niêm yết mới.
      */
-    function updateListingPrice(uint256 _newListingPrice) public onlycreator {
+    function updateListingPrice(uint256 _newListingPrice) public onlyOwner {
         listingPrice = _newListingPrice;
         emit ListingPriceUpdated(_newListingPrice);
     }
@@ -303,10 +333,10 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
     /**
      * @dev Rút phí niêm yết đã thu được. Chỉ chủ sở hữu hợp đồng marketplace mới có thể gọi.
      */
-    function withdrawListingPrice() public onlycreator nonReentrant {
+    function withdrawListingPrice() public onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "No balance to withdraw");
-        (bool success, ) = payable(creator()).call{value: balance}("");
+        (bool success, ) = payable(owner()).call{value: balance}("");
         require(success, "Withdrawal failed");
     }
 
@@ -330,7 +360,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
         require(msg.value == listingPrice, "Must pay listing price");
         
         // Mint NFT thông qua hợp đồng MyNFT
-        uint256 newItemId = nftContract.mintNFT(msg.sender, _uri, address(this));
+        uint256 newItemId = nftContract.mint(msg.sender, _uri);
 
         // Lưu trữ các thuộc tính mở rộng
         tokenExtendedDetails[newItemId] = TokenDetails({
@@ -561,7 +591,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      */
     function updateRoyalty(uint256 _tokenId, uint256 _newRoyaltyBasisPoints) public {
         // Chỉ cho phép người tạo ban đầu của NFT hoặc chủ hợp đồng marketplace cập nhật bản quyền
-        require(nftContract.creatorOf(_tokenId) == msg.sender || creator() == msg.sender, "Only original creator or marketplace creator can update royalty");
+        require(nftContract.creatorOf(_tokenId) == msg.sender || owner() == msg.sender, "Only original creator or marketplace owner can update royalty");
         require(_newRoyaltyBasisPoints <= 10000, "Royalty cannot exceed 100%"); // 10000 basis points = 100%
 
         tokenExtendedDetails[_tokenId].royaltyBasisPoints = _newRoyaltyBasisPoints;

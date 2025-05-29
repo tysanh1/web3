@@ -1,36 +1,41 @@
 const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
-  // Get the contract factory
-  const NFTContract = await hre.ethers.getContractFactory("NFTContract");
+  // Deploy NFT contract
+  console.log("Deploying NFT contract...");
+  const MyNFT = await hre.ethers.getContractFactory("MyNFT");
+  const nft = await MyNFT.deploy("NFT Collection", "NFTC");
+  await nft.waitForDeployment();
   
-  // Deploy the contract
-  const nftContract = await NFTContract.deploy();
-  await nftContract.waitForDeployment();
-  
-  const address = await nftContract.getAddress();
-  console.log("NFTContract deployed to:", address);
+  const nftAddress = await nft.getAddress();
+  console.log("✅ NFT Contract deployed to:", nftAddress);
+
+  // Update contract addresses
+  const contractAddresses = {
+    MyNFT: nftAddress,
+    NFTMarketplace: "0x0000000000000000000000000000000000000000" // Will be updated when marketplace is deployed
+  };
+
+  // Ensure the contracts directory exists
+  const contractsDir = path.join(__dirname, "..", "src", "contracts");
+  if (!fs.existsSync(contractsDir)) {
+    fs.mkdirSync(contractsDir, { recursive: true });
+  }
+
+  // Write contract addresses
+  fs.writeFileSync(
+    path.join(contractsDir, "contract-addresses.json"),
+    JSON.stringify(contractAddresses, null, 2)
+  );
+
+  console.log("Contract addresses updated in frontend config");
 }
 
-// Execute the deployment
 main()
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error);
     process.exit(1);
-  }); 
-console.log("INFURA_ID:", process.env.INFURA_KEY);
-const hre = require("hardhat");
-
-async function main() {
-  const NFTContract = await hre.ethers.getContractFactory("MyNFT");
-  const contract = await NFTContract.deploy("MyCollection", "MCL");
-  await contract.waitForDeployment();
-
-  console.log("✅ Contract deployed at:", contract.target);
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  });
