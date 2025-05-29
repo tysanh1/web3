@@ -7,12 +7,16 @@ interface User {
   email: string;
 }
 
+interface SignUpData {
+  email: string;
+  password: string;
+}
 interface AuthContextProps {
   session: any | null;
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (data: SignUpData) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -23,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<any | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataSignUp, setDataSignUp] = useState<SignUpData | null>();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,9 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (data: SignUpData) => {
     try {
-      await localAuthService.signUp(email, password);
+      await localAuthService.signUp(data);
       toast({
         title: "Account created",
         description: "Please log in with your new account",

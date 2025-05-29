@@ -31,17 +31,17 @@ contract MyNFT is ERC721URIStorage, Ownable {
     /**
      * @dev Tạo một NFT mới và gán nó cho người gọi.
      * @param to Địa chỉ sẽ nhận NFT.
-     * @param tokenURI URI metadata của NFT (hash IPFS).
+     * @param uri URI metadata của NFT (hash IPFS).
      * @param marketplace Địa chỉ của hợp đồng marketplace đã tạo NFT này.
      * @return tokenId ID của NFT vừa được tạo.
      */
-    function mintNFT(address to, string memory tokenURI, address marketplace) public onlycreator returns (uint256) {
+    function mintNFT(address to, string memory uri, address marketplace) public onlycreator returns (uint256) {
         // Tăng ID token cho NFT mới
         uint256 newItemId = _tokenIdCounter;
         _tokenIdCounter++; 
         
         _mint(to, newItemId);
-        _setTokenURI(newItemId, tokenURI);
+        _seturi(newItemId, uri);
         marketplaceCreator[newItemId] = marketplace; // Lưu địa chỉ marketplace đã tạo
         originalCreator[newItemId] = to;
         return newItemId;
@@ -137,7 +137,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      * @dev Được phát ra khi một NFT mới được tạo thông qua marketplace.
      * @param tokenId ID của NFT.
      * @param creator Địa chỉ của người tạo NFT.
-     * @param tokenURI URI metadata của NFT.
+     * @param uri URI metadata của NFT.
      * @param category Thể loại của NFT.
      * @param collection Bộ sưu tập của NFT.
      * @param royaltyBasisPoints Tỷ lệ bản quyền (basis points).
@@ -146,7 +146,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
     event NFTCreated(
         uint256 indexed tokenId,
         address indexed creator,
-        string tokenURI,
+        string uri,
         string category,
         string collection,
         uint256 royaltyBasisPoints,
@@ -313,7 +313,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
     /**
      * @dev Tạo một NFT mới thông qua marketplace.
      * Người gọi phải gửi listingPrice cùng với giao dịch.
-     * @param _tokenURI URI metadata của NFT (hash IPFS).
+     * @param _uri URI metadata của NFT (hash IPFS).
      * @param _category Thể loại của NFT (ví dụ: "Art", "Gaming").
      * @param _collection Bộ sưu tập của NFT.
      * @param _royaltyBasisPoints Tỷ lệ bản quyền cho người tạo (ví dụ: 250 cho 2.5%).
@@ -321,7 +321,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      * @return tokenId ID của NFT vừa được tạo.
      */
     function createNFT(
-        string memory _tokenURI,
+        string memory _uri,
         string memory _category,
         string memory _collection,
         uint256 _royaltyBasisPoints,
@@ -330,7 +330,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
         require(msg.value == listingPrice, "Must pay listing price");
         
         // Mint NFT thông qua hợp đồng MyNFT
-        uint256 newItemId = nftContract.mintNFT(msg.sender, _tokenURI, address(this));
+        uint256 newItemId = nftContract.mintNFT(msg.sender, _uri, address(this));
 
         // Lưu trữ các thuộc tính mở rộng
         tokenExtendedDetails[newItemId] = TokenDetails({
@@ -343,7 +343,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
         emit NFTCreated(
             newItemId,
             msg.sender,
-            _tokenURI,
+            _uri,
             _category,
             _collection,
             _royaltyBasisPoints,

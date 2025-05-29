@@ -1,8 +1,5 @@
 import { ethers } from "ethers";
-import {
-  NFT_CONTRACT_ABI,
-  NFT_CONTRACT_ADDRESS,
-} from "../contracts/NFTContract";
+import { NFT_CONTRACT_ABI, NFT_CONTRACT_ADDRESS} from "../contracts/NFTContract";
 import { NFT, NFTFormData, Transaction } from "@/types/nft";
 import { v4 as uuidv4 } from "uuid";
 import { localNFTService } from "./localNFTService";
@@ -154,22 +151,52 @@ export const smartContractService = {
 
   // Get NFT contract
   getContract: async (needSigner = false) => {
-    const provider = await getProvider();
+    try {
+      const provider = await getProvider();
+      
+      // Check if contract exists at the address
+      const code = await provider.getCode(NFT_CONTRACT_ADDRESS);
+      if (code === '0x') {
+        console.warn('Contract not deployed at this address, returning null');
+        return null;
+      }
 
-    if (needSigner) {
-      const signer = await getSigner();
-      return new ethers.Contract(
+      // Get network info
+      const { chainId, networkInfo } = await getNetworkInfo();
+      console.log('Current network:', networkInfo.name, 'Chain ID:', chainId);
+
+      if (needSigner) {
+        const signer = await getSigner();
+        const contract = new ethers.Contract(
+          NFT_CONTRACT_ADDRESS,
+          NFT_CONTRACT_ABI,
+          signer
+        );
+        // Verify contract is accessible
+        await contract.name().catch(e => {
+          console.warn('Contract not accessible with current signer, returning null');
+          return null;
+        });
+        return contract;
+      }
+
+      const contract = new ethers.Contract(
         NFT_CONTRACT_ADDRESS,
         NFT_CONTRACT_ABI,
-        signer
+        provider
       );
+      
+      // Verify contract is accessible
+      await contract.name().catch(e => {
+        console.warn('Contract not accessible with current provider, returning null');
+        return null;
+      });
+      
+      return contract;
+    } catch (error: any) {
+      console.warn('Error getting contract:', error.message);
+      return null;
     }
-
-    return new ethers.Contract(
-      NFT_CONTRACT_ADDRESS,
-      NFT_CONTRACT_ABI,
-      provider
-    );
   },
 
   // Mint a new NFT

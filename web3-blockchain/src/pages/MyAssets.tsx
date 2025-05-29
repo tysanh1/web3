@@ -119,6 +119,11 @@ const MyAssets = () => {
         console.log('Setting up Transfer event listeners...');
         const contract = await nftService.getContract();
         
+        if (!contract) {
+          console.warn('Contract not available, skipping event listeners');
+          return () => {};
+        }
+
         const handleTransfer = (from: string, to: string, tokenId: string) => {
           console.log('Transfer event detected:', { from, to, tokenId });
           if (from.toLowerCase() === account.toLowerCase() || 

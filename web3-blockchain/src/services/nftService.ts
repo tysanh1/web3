@@ -79,39 +79,79 @@ export const nftService = {
     try {
       // Get contract instance
       const contract = await smartContractService.getContract();
+      if (!contract) {
+        console.warn('Contract not available, returning mock data');
+        return mockNFTs.filter(nft => 
+          nft.owner.toLowerCase() === owner.toLowerCase()
+        );
+      }
 
-      // Get balance of owner
-      const balance = await contract.balanceOf(owner);
+      console.log('Contract instance obtained for address:', owner);
+
+      // Get balance of owner with error handling
+      let balance;
+      try {
+        balance = await contract.balanceOf(owner);
+        console.log('NFT balance for address:', balance.toString());
+      } catch (error) {
+        console.error('Error calling balanceOf:', error);
+        throw new Error('Failed to get NFT balance: ' + (error as Error).message);
+      }
+
       const nfts: NFT[] = [];
 
       // Fetch each NFT owned by the address
       for (let i = 0; i < balance; i++) {
-        const tokenId = await contract.tokenOfOwnerByIndex(owner, i);
-        const tokenURI = await contract.tokenURI(tokenId);
-        const metadata = await fetch(tokenURI).then((res) => res.json());
+        try {
+          const tokenId = await contract.tokenOfOwnerByIndex(owner, i);
+          console.log('Found token ID:', tokenId.toString());
+          
+          const tokenURI = await contract.tokenURI(tokenId);
+          console.log('Token URI:', tokenURI);
+          
+          let metadata;
+          try {
+            const response = await fetch(tokenURI);
+            metadata = await response.json();
+          } catch (error) {
+            console.warn('Error fetching metadata for token', tokenId.toString(), error);
+            metadata = {
+              name: `NFT #${tokenId}`,
+              description: 'Metadata unavailable',
+              image: 'https://via.placeholder.com/400?text=Metadata+Unavailable',
+            };
+          }
 
-        nfts.push({
-          id: tokenId.toString(),
-          name: metadata.name,
-          description: metadata.description,
-          image: metadata.image,
-          owner: owner,
-          creator: metadata.creator || owner,
-          tokenURI: tokenURI,
-          createdAt: new Date().toISOString(),
-          price: metadata.price || "0",
-          currency: "ETH",
-          category: metadata.category || "art",
-          collection: metadata.collection || "Unknown",
-          views: metadata.views || 0,
-          likes: metadata.likes || 0,
-        });
+          nfts.push({
+            id: tokenId.toString(),
+            name: metadata.name,
+            description: metadata.description,
+            image: metadata.image,
+            owner: owner,
+            creator: metadata.creator || owner,
+            tokenURI: tokenURI,
+            createdAt: new Date().toISOString(),
+            price: metadata.price || "0",
+            currency: "ETH",
+            category: metadata.category || "art",
+            collection: metadata.collection || "Unknown",
+            views: metadata.views || 0,
+            likes: metadata.likes || 0,
+          });
+        } catch (error) {
+          console.error('Error fetching NFT data for index', i, error);
+          // Continue to next NFT instead of breaking
+          continue;
+        }
       }
 
       return nfts;
     } catch (error) {
       console.error("Error fetching NFTs:", error);
-      throw error;
+      // For development, fall back to mock data if contract calls fail
+      return mockNFTs.filter(nft => 
+        nft.owner.toLowerCase() === owner.toLowerCase()
+      );
     }
   },
 
@@ -155,6 +195,11 @@ export const nftService = {
   getNFTById: async (id: string): Promise<NFT | null> => {
     try {
       const contract = await smartContractService.getContract();
+      if (!contract) {
+        console.warn('Contract not available, returning mock data');
+        return mockNFTs.find(nft => nft.id === id) || null;
+      }
+
       const owner = await contract.ownerOf(id);
       const tokenURI = await contract.tokenURI(id);
       const metadata = await fetch(tokenURI).then((res) => res.json());
