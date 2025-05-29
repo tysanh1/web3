@@ -15,6 +15,7 @@ interface NFTCardProps {
   category: string;
   likes?: number;
   views?: number;
+  owner?: string;
 }
 
 const NFTCard: React.FC<NFTCardProps> = ({

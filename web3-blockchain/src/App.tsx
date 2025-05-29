@@ -32,8 +32,8 @@ const App = () => (
           <Route path="/qrcode" element={<QRCodePage />} />
           <Route path="/create" element={<CreateNFT />} />
           <Route path="/nft/:id" element={<NFTDetail />} />
+          <Route path="/my-assets" element={<MyAssets />} />
           <Route path="*" element={<NotFound />} />
-          <Route path="/myassets" element={<MyAssets/>} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

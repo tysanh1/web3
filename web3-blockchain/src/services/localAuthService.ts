@@ -5,41 +5,72 @@ import { useToast } from '@/hooks/use-toast';
 interface User {
   id: string;
   email: string;
+  username?: string;
+  avatar?: string;
+  walletAddress?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthResponse {
   user: User | null;
   session: {
     access_token: string;
+    expires_at?: number;
   } | null;
+}
+
+interface SignUpData {
+  email: string;
+  password: string;
+  username?: string;
+}
+
+interface UpdateUserData {
+  username?: string;
+  avatar?: string;
+  walletAddress?: string;
 }
 
 // LocalStorage keys
 const USER_KEY = 'local_auth_user';
 const SESSION_KEY = 'local_auth_session';
+const USERS_KEY = 'users';
+
+// Helper function to get users from localStorage
+const getUsers = () => JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+
+// Helper function to save users to localStorage
+const saveUsers = (users: any[]) => localStorage.setItem(USERS_KEY, JSON.stringify(users));
 
 export const localAuthService = {
-  signUp: async (email: string, password: string): Promise<void> => {
+  signUp: async (data: SignUpData): Promise<void> => {
     try {
-      // Check if user exists
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userExists = users.some((u: any) => u.email === email);
+      const users = getUsers();
       
-      if (userExists) {
-        throw new Error('User already exists');
+      // Check if email exists
+      if (users.some((u: any) => u.email === data.email)) {
+        throw new Error('Email already registered');
+      }
+
+      // Check if username exists
+      if (data.username && users.some((u: any) => u.username === data.username)) {
+        throw new Error('Username already taken');
       }
       
       // Create new user
+      const now = new Date().toISOString();
       const newUser = {
         id: uuidv4(),
-        email,
-        password, // In a real app, this would be hashed
-        createdAt: new Date().toISOString(),
+        email: data.email,
+        username: data.username || data.email.split('@')[0],
+        password: data.password, // In a real app, this would be hashed
+        createdAt: now,
+        updatedAt: now,
       };
       
       // Save user
-      localStorage.setItem('users', JSON.stringify([...users, newUser]));
+      saveUsers([...users, newUser]);
       
       return Promise.resolve();
     } catch (error: any) {
@@ -56,17 +87,18 @@ export const localAuthService = {
   signIn: async (email: string, password: string): Promise<AuthResponse> => {
     try {
       // Find user
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users = getUsers();
       const user = users.find((u: any) => u.email === email && u.password === password);
       
       if (!user) {
         throw new Error('Invalid login credentials');
       }
       
-      // Create session
+      // Create session with expiration
       const { password: _, ...safeUser } = user;
       const session = {
         access_token: uuidv4(),
+        expires_at: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
         user: safeUser
       };
       
@@ -96,43 +128,118 @@ export const localAuthService = {
   },
   
   resetPassword: async (email: string): Promise<void> => {
-    // In a real app, this would send an email
-    const { toast } = useToast();
-    toast({
-      title: 'Password reset link sent',
-      description: `If an account exists for ${email}, you will receive a password reset link.`
-    });
-    return Promise.resolve();
+    try {
+      const users = getUsers();
+      const user = users.find((u: any) => u.email === email);
+      
+      if (!user) {
+        // Don't reveal if email exists or not
+        return Promise.resolve();
+      }
+      
+      // In a real app, this would send an email with reset link
+      const { toast } = useToast();
+      toast({
+        title: 'Password reset link sent',
+        description: `If an account exists for ${email}, you will receive a password reset link.`
+      });
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error in reset password:', error);
+      return Promise.resolve(); // Still resolve to not reveal if email exists
+    }
+  },
+  
+  updateUser: async (userId: string, data: UpdateUserData): Promise<User> => {
+    try {
+      const users = getUsers();
+      const userIndex = users.findIndex((u: any) => u.id === userId);
+      
+      if (userIndex === -1) {
+        throw new Error('User not found');
+      }
+      
+      // Update user data
+      const updatedUser = {
+        ...users[userIndex],
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+      
+      users[userIndex] = updatedUser;
+      saveUsers(users);
+      
+      // Update current user if it's the same
+      const currentUser = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+      if (currentUser && currentUser.id === userId) {
+        localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+      }
+      
+      const { password: _, ...safeUser } = updatedUser;
+      return safeUser;
+    } catch (error: any) {
+      const { toast } = useToast();
+      toast({
+        title: 'Update failed',
+        description: error.message || 'Failed to update user data',
+        variant: 'destructive'
+      });
+      return Promise.reject(error);
+    }
   },
   
   getSession: async (): Promise<any> => {
-    const user = localStorage.getItem(USER_KEY);
     const session = localStorage.getItem(SESSION_KEY);
     
-    if (!user || !session) {
+    if (!session) {
+      return { data: { session: null } };
+    }
+    
+    const parsedSession = JSON.parse(session);
+    
+    // Check if session has expired
+    if (parsedSession.expires_at && Date.now() > parsedSession.expires_at) {
+      localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(SESSION_KEY);
       return { data: { session: null } };
     }
     
     return {
       data: {
-        session: JSON.parse(session)
+        session: parsedSession
       }
     };
   },
   
   onAuthStateChange: (callback: (event: string, session: any) => void) => {
     // This is a simplified version that doesn't handle real-time changes
-    const session = localStorage.getItem(SESSION_KEY);
+    const checkSession = () => {
+      const session = localStorage.getItem(SESSION_KEY);
+      
+      if (session) {
+        const parsedSession = JSON.parse(session);
+        if (parsedSession.expires_at && Date.now() > parsedSession.expires_at) {
+          localStorage.removeItem(USER_KEY);
+          localStorage.removeItem(SESSION_KEY);
+          callback('SIGNED_OUT', null);
+        } else {
+          callback('SIGNED_IN', parsedSession);
+        }
+      } else {
+        callback('SIGNED_OUT', null);
+      }
+    };
     
-    if (session) {
-      callback('SIGNED_IN', JSON.parse(session));
-    } else {
-      callback('SIGNED_OUT', null);
-    }
+    // Check immediately
+    checkSession();
+    
+    // Check periodically
+    const interval = setInterval(checkSession, 1000 * 60); // Check every minute
     
     return {
       subscription: {
-        unsubscribe: () => {}
+        unsubscribe: () => clearInterval(interval)
       }
     };
   }

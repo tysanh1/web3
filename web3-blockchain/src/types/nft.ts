@@ -1,4 +1,3 @@
-
 export interface NFT {
   id: string;
   name: string;
@@ -8,6 +7,12 @@ export interface NFT {
   creator: string;
   tokenURI: string;
   createdAt: string;
+  price: string;
+  currency: string;
+  category: string;
+  collection: string;
+  views: number;
+  likes: number;
   // Blockchain-related fields
   contractAddress?: string;
   tokenId?: string;
@@ -18,8 +23,12 @@ export interface NFT {
 export interface NFTFormData {
   name: string;
   description: string;
-  image: File | null;
+  image: string | File;
+  price?: string;
+  category?: string;
+  collection?: string;
 }
+
 
 export interface Transaction {
   hash: string;

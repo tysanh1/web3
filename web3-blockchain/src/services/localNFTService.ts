@@ -1,39 +1,56 @@
-
 import { NFT, Transaction, NFTFormData } from '@/types/nft';
 import { v4 as uuidv4 } from 'uuid';
 
-// Initial sample data
+// Initial sample data matching Marketplace structure
 const initialNFTs: NFT[] = [
   {
     id: '1',
-    name: 'Cosmic Explorer',
-    description: 'A journey through the stars and beyond',
-    image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YWJzdHJhY3R8ZW58MHx8MHx8fDA%3D',
+    name: 'Cosmic Dreamer #1',
+    image: 'https://picsum.photos/id/123/800/800',
+    price: '0.5',
+    currency: 'ETH',
+    creator: 'CryptoPunks',
+    category: 'art',
+    collection: 'CryptoPunks',
+    description: 'A journey through the cosmic dreamscape of the digital universe.',
+    views: 1500,
+    likes: 120,
     owner: '0x1234567890123456789012345678901234567890',
-    creator: '0x1234567890123456789012345678901234567890',
     tokenURI: 'ipfs://mock/1',
     createdAt: new Date().toISOString(),
   },
   {
     id: '2',
-    name: 'Digital Landscape',
-    description: 'Virtual world reimagined in vibrant colors',
-    image: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8YWJzdHJhY3R8ZW58MHx8MHx8fDA%3D',
+    name: 'Neon Ape #42',
+    image: 'https://picsum.photos/id/124/800/800',
+    price: '2.5',
+    currency: 'ETH',
+    creator: 'Bored Ape Yacht Club',
+    category: 'collectibles',
+    collection: 'Bored Ape Yacht Club',
+    description: 'A unique neon-themed ape from the famous collection.',
+    views: 4200,
+    likes: 350,
     owner: '0x1234567890123456789012345678901234567890',
-    creator: '0x0987654321098765432109876543210987654321',
     tokenURI: 'ipfs://mock/2',
     createdAt: new Date().toISOString(),
   },
   {
     id: '3',
-    name: 'Neon Dreams',
-    description: 'Cyberpunk inspired digital artwork',
-    image: 'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGFic3RyYWN0fGVufDB8fDB8fHww',
+    name: 'Digital Soundscape #7',
+    image: 'https://picsum.photos/id/125/800/800',
+    price: '0.3',
+    currency: 'ETH',
+    creator: 'Art Blocks',
+    category: 'music',
+    collection: 'Art Blocks',
+    description: 'An audio-visual experience encoded as an NFT.',
+    views: 1200,
+    likes: 89,
     owner: '0x1234567890123456789012345678901234567890',
-    creator: '0x1234567890123456789012345678901234567890',
     tokenURI: 'ipfs://mock/3',
     createdAt: new Date().toISOString(),
-  },
+  }
 ];
 
 const initialTransactions: Transaction[] = [
@@ -104,11 +121,13 @@ export const localNFTService = {
     const nfts = JSON.parse(localStorage.getItem('nfts') || '[]');
     const id = (nfts.length + 1).toString();
     
-    let imageUrl = 'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGFic3RyYWN0fGVufDB8fDB8fHww';
+    let imageUrl = 'https://picsum.photos/id/129/800/800';
     
     // If there's an image, use object URL (in a real app, would upload to IPFS)
-    if (data.image) {
+    if (data.image instanceof File) {
       imageUrl = URL.createObjectURL(data.image);
+    } else if (typeof data.image === 'string') {
+      imageUrl = data.image;
     }
     
     const newNFT: NFT = {
@@ -116,8 +135,14 @@ export const localNFTService = {
       name: data.name,
       description: data.description,
       image: imageUrl,
+      price: data.price || '0.1',
+      currency: 'ETH',
+      creator: creator,
+      category: data.category || 'art',
+      collection: data.collection || 'Unknown Collection',
+      views: 0,
+      likes: 0,
       owner: creator,
-      creator,
       tokenURI: `ipfs://mock/${id}`,
       createdAt: new Date().toISOString(),
     };
