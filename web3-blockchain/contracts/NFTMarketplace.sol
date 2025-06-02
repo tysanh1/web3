@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./MyNFT.sol";
 
 /**
  * @title NFTMarketplace
@@ -234,7 +235,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
      * @dev Cập nhật phí niêm yết. Chỉ chủ sở hữu hợp đồng marketplace mới có thể gọi.
      * @param _newListingPrice Phí niêm yết mới.
      */
-    function updateListingPrice(uint256 _newListingPrice) public onlyowner {
+    function updateListingPrice(uint256 _newListingPrice) public onlyOwner {
         listingPrice = _newListingPrice;
         emit ListingPriceUpdated(_newListingPrice);
     }
@@ -242,7 +243,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
     /**
      * @dev Rút phí niêm yết đã thu được. Chỉ chủ sở hữu hợp đồng marketplace mới có thể gọi.
      */
-    function withdrawListingPrice() public onlyowner nonReentrant {
+    function withdrawListingPrice() public onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "No balance to withdraw");
         (bool success, ) = payable(owner()).call{value: balance}("");
@@ -378,7 +379,7 @@ contract NFTMarketplace is Ownable, ReentrancyGuard {
             price: _newPrice,
             isSold: false
         });
-    const NFT_CONTRACT_ADDRESS = "YOUR_DEPLOYED_CONTRACT_ADDRESS";
+
         // Đảm bảo không có đấu giá đang hoạt động cho NFT này
         if (idToAuction[_tokenId].started) {
             delete idToAuction[_tokenId];
